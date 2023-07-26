@@ -16,8 +16,8 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
 class Transaction(models.Model):
-    from_user = models.OneToOneField(User, on_delete=models.DO_NOTHING, verbose_name="От кого", related_name='from_user')
-    to_user = models.OneToOneField(User, on_delete=models.DO_NOTHING, verbose_name="Кому", related_name='to_user')
+    from_user = models.ForeignKey(User, on_delete=models.DO_NOTHING, verbose_name="От кого", related_name='from_user')
+    to_user = models.ForeignKey(User, on_delete=models.DO_NOTHING, verbose_name="Кому", related_name='to_user')
     is_completed = models.BooleanField(default=False, verbose_name="Статус")
     created_at = models.DateTimeField(auto_now=True, verbose_name="Дата")
     amount = models.FloatField(default=0, verbose_name="Сумма")
