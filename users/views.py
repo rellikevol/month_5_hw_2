@@ -2,8 +2,8 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
 from users.models import User, Transaction
 from users.serializers import UserSerializer, UserRegisterSerializer, \
-    UserDetailSerializer, UserTransactionsSerializer
-from users.permissions import UserPermissions
+    UserDetailSerializer, UserTransactionsSerializer, CreateTransactionSerializer
+from users.permissions import UserPermissions, TransactionPermission
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
@@ -13,7 +13,7 @@ class UserAPIView(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Updat
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.action in ('update', 'destroy', 'retrieve'):
+        if self.action in ('update', 'destroy', 'retrieve', 'partial_update'):
             return (UserPermissions(), )
         return (AllowAny(), )
 
@@ -27,7 +27,6 @@ class UserAPIView(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Updat
 
 class UserTransactionAPIView(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                              mixins.CreateModelMixin, GenericViewSet):
-
     serializer_class = UserTransactionsSerializer
 
     def get_queryset(self):
@@ -37,9 +36,11 @@ class UserTransactionAPIView(mixins.ListModelMixin, mixins.RetrieveModelMixin,
     def get_permissions(self):
         if self.action in ('list', 'create'):
             return (UserPermissions(), )
+        if self.action in ('retrieve', ):
+            return (TransactionPermission(), )
         return (AllowAny(), )
-"""
+
     def get_serializer_class(self):
-        self.queryset = self.queryset.filter(from_user=self.request.user.id)
+        if self.action in ('create',):
+            return CreateTransactionSerializer
         return UserTransactionsSerializer
-    """

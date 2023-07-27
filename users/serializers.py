@@ -46,12 +46,44 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 class UserTransactionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ('id', 'from_user', 'to_user', 'is_completed', 'created_at', 'amount')
+        fields = ('id', 'from_user', 'to_user', 'created_at', 'amount')
+
+
+class CreateTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = ('amount', 'to_address')
+
+    def validate(self, attrs):
+        if User.objects.get(pk=self.context['request'].user.id).wallet_address == attrs['to_address']:
+            raise serializers.ValidationError({'to_adress': 'Нельзя перевести самому себе'})
+        if attrs['amount'] > User.objects.get(pk=self.context['request'].user.id).wallet_amount:
+            raise serializers.ValidationError({'amount': 'На балансе не достаточно средств'})
+        if not User.objects.filter(wallet_address=attrs['to_address']).exists():
+            raise serializers.ValidationError({'to_adress': 'Такого адреса не существует'})
+        return attrs
+
+    def create(self, validated_data: dict):
+        from_user = User.objects.get(pk=self.context['request'].user.id)
+        to_user = User.objects.get(wallet_address=validated_data['to_address'])
+        from_user.wallet_amount = from_user.wallet_amount - validated_data['amount']
+        from_user.save()
+        to_user.wallet_amount = to_user.wallet_amount + validated_data['amount']
+        to_user.save()
+        transaction = Transaction.objects.create(
+            from_user=from_user,
+            from_address=from_user.wallet_address,
+            to_user=to_user,
+            to_address=to_user.wallet_address,
+            amount=validated_data['amount']
+        )
+        transaction.save()
+        return transaction
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-
+    user_transactions = UserTransactionsSerializer(read_only=True, many=True)
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'age', 'phone_number',
-                  'date_joined', 'wallet_address', 'wallet_amount')
+                  'date_joined', 'wallet_address', 'wallet_amount', 'user_transactions')
